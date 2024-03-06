@@ -1,341 +1,529 @@
-Lab 1: The Basics (Networking, Pools and Virtual Servers)
-=========================================================
 
-In this lab we will access the Management GUI. We will then create the
-VLANs, and assign a self IP addresses to our VLAN. As mentioned during
-our lecture portion, BIG-IPs may be put in-line or one-armed depending
-on your customer’s requirements and topology.
+Lab 2: Load Balancing, Monitoring and Persistence
+=================================================
 
-Log on to the BIG-IP TMUI (GUI) Interface:
-  - **UDF** - Under Components, select the **Access** drop-down and then **TMUI**
-  - **AWS** - Go to https://<Bigip1ManagementEipAddress>
+Objectives:
 
-Creating VLANs
---------------
+-  Configure and review the Ratio load balancing method
 
-You will need create two untagged VLANs, one client-side VLAN (**client_vlan**) and one server-side VLAN (**server_vlan)** for the devices in your network.
+-  Build and test priority groups
 
-1. From the sidebar select **Network** **> VLANs** then select
-   **Create**
+-  Build a content monitor that looks for a receive string and requires
+   authentication
 
-.. image:: /_static/101/image10.png
-   :width: 3.29032in
-   :height: 2.625in
+-  Build and review simple (source IP) persistence and cookie
+   persistence.
 
-a. Under **General Properties**:
+Ratio Load Balancing
+--------------------
 
-   i. **Name**: client_vlan
+1. Go to **Local** **Traffic>Pools** and select **www_pool** and then
+   **Members** from the top bar or you could click on the **Members**
+   link in the Pool List screen.
 
-b. The name is for management purposes only, you could name them after
-   your children or pets
+.. image:: /_static/101/image24.png
+   :width: 5.35046in
+   :height: 1.60014in
 
-   i. **Tag**: <leave blank>
+a. Note: When we created the pool, we performed all our configuration on
+   one page, but when we modify a pool the **Resource** information is
+   under the **Members** tab
 
-      1. Entering a tag is only required for “\ **Tagged**\ ” (802.1q)
-         interfaces, “\ **Untagged**\ ” interfaces will automatically
-         get a tag which is used for internal L2 segmentation of
-         traffic.
+5. Under **Load** **Balancing** section
 
-c. Under **Resources** in the **Interfaces** section:
+   a. Change the **Load** **Balancing** **Method** to **Ratio (Member)**
 
-   i.   **Interface**: 1.1
+   b. As you look at the drop down menu, notice most load balancing
+      methods have two options, **(Node)** or **(Member)**. You should know the
+      difference between the two.
 
-   ii.  **Tagging**: Untagged
+.. image:: /_static/101/image25.png
+   :width: 5.01042in
+   :height: 2.59576in
 
-   iii. Select the **Add** button. Leave all other items at the default
-        setting.
+c. Don’t forget the **Update** button
 
-.. image:: /_static/101/image11.png
-   :width: 2.39187in
-   :height: 1.66681in
+a. Then under **Current Members**
 
-iv. When you have completed your VLAN configuration, hit the
-    **Finished** button
+   i.  Select the first member in the pool **10.1.20.11:80**.
 
-.. important::
-   Now create another untagged VLAN named **server_vlan** on interface **1.2.**
+   ii. Under the **Configuration** section
 
-Assigning a Self IP addresses to your VLANs
--------------------------------------------
+       1. Change the **Ratio** of the member to 3
 
-1. Go to **Network > Self IPs**, select **Create**.
+.. image:: /_static/101/image26.png
+   :width: 4.26042in
+   :height: 4.04175in
 
-.. image:: /_static/101/image12.png
-   :width: 5.8125in
-   :height: 3.08766in
+b. Select the **Update** button
 
-a. Create a new self IP, for the **server_vlan** and **client_vlan**
-   VLANs. In **Network >> Self IPs >> New Self IP**, under
-   **Configuration** enter:
+2. Verification
 
-+---------------+---------------+---------------+
-|    Option     |  Server-side  |  Client-side  |
-+===============+===============+===============+
-| Name          | server_ip     | client_ip     |
-+---------------+---------------+---------------+
-| IP Address    | 10.1.20.245   | 10.1.10.245   |
-+---------------+---------------+---------------+
-| Netmask       | 255.255.255.0 | 255.255.255.0 |
-+---------------+---------------+---------------+
-| VLAN          | server_vlan   | client_vlan   |
-+---------------+---------------+---------------+
-| Port Lockdown | Allow None    | Allow None    |
-+---------------+---------------+---------------+
+   a. Check the pool statics by selecting **Statistics** in the top bar,
+      if you are still in **Local Traffic> Pools** or by going to
+      **Statistics>Module Statistics>Local Traffic** and selecting
+      **Pool** from **Statistics Type**.
 
-.. caution::
-   A common mistake is to forgot to change the VLAN/Tunnel selection to the appropriate VLAN.  Make sure your self IPs are in the appropriate VLAN. 
+   b. Reset the statistics for your **www_pool** pool by checking the
+      boxes next to the pool members and hitting the **Reset** button
 
-- The default **Port Lockdown** setting of **Allow None** means the Self IP only responds to ICMP requests.
-- The **Allow Defaults** selection opens the following on the self IP of the VLAN.
-   - TCP: ssh, domain, snmp, https
-   - TCP: 4353, 6699 (for F5 protocols, such as HA and iQuery)
-   - UDP: 520, cap, domain, f5-iquery, snmp
-   - PROTOCOL: ospf
+      i.   Browse to your **www_vs** **(10.1.10.100)** virtual server
 
-b. When you have completed your selfIP configuration, hit the **Finished**
-   button. You should have something similar to the following:
+      ii.  Refresh the browser screen several times (use “<ctrl>” F5)
 
-.. image:: /_static/101/image14.png
-   :width: 5.84768in
-   :height: 1.30208in
+      iii. Select the **Refresh** button on the **Statistics** screen
 
-Assigning the Default Gateway
------------------------------
+      iv.  How many Total connections has each member taken?
 
-1. Go to **Network > Routes** and then **Add**.
+      v.   Is the ratio of connections correct between the members?
 
-   a. Here is where we assign our default gateway (and other static
-      routes as desired)
+   c. Now go back and put the pool back to Round Robin Load Balancing
+      Method
 
-.. image:: /_static/101/image15.png
-   :width: 3.96875in
-   :height: 2.33043in
+      i.   Reset the statistics
 
-b. Under **Properties**
+      ii.  Refresh the virtual server page several times
 
-   i.   **Name**: def_gw
+      iii. Refresh the statistics
 
-   ii.  **Destination**: 0.0.0.0
+      iv.  Does the ratio setting have any impact now?
 
-   iii. **Netmask**: 0.0.0.0
+Priority Groups Lab
+-------------------
 
-   iv.  **Resource**: Use Gateway…
+Let’s look at priority groups. In this scenario we will treat the
+**.13** server as if it was is in a disaster recovery site that can be
+reached over a backhaul. To maintain at least two members in the pool
+for redundancy and load sharing, our customer would like to use it
+during maintenance periods or if one of the two other pool members
+fails.
 
-   v.   **Gateway** **Address**: 10.1.10.1
+1. Go to **Local Traffic>Pools>www_pool**
 
-   vi.  When you have completed defining your default gateway, hit the
-        **Finished** button
+   a. Select the **Members** tab.
 
-1. Verify your network configuration
+      i.  Set the **Load Balancing Method** back to **Round Robin**
 
-   b. Use SSH or WebShell (UDF Only) to access your BIG-IP.
+      ii. Set the **Priority Group Activation** to **Less than …** **2**
+          Available Members.
 
-      i.  Ping your default gateway, 10.1.10.1
+.. image:: /_static/101/image27.png
+   :width: 5.4375in
+   :height: 2.03332in
 
-      ii. Ping a web server at 10.1.20.11.
+b. Don’t forget the **Update** button
 
-Creating Pools
---------------
-In this lab we will build a pool and virtual serve to support our web
-site and verify our configurations by accessing our web servers through
-the BIG-IP. Verification will be performed visually and through various
-statistical interfaces.
+c. Select the pool members **10.1.20.11** and **10.1.20.12** and set
+   their **Priority Group** to **2**.
 
-1. From the sidebar select **Local Traffic >>** **Pools** then select
-   **Create**. Here we will create our new pool
+   i. This will allow you to change the priority on that particular
+      member.
 
-.. image:: /_static/101/image16.png
-   :width: 3.46998in
-   :height: 3.07292in
+.. image:: /_static/101/image28.png
+   :width: 4.49091in
+   :height: 4.26042in
 
-a. Under **Configuration**:
+6. Review your settings and let’s see how load balancing reacts now.
 
-   i.   **Name**: www_pool
-          - The name is for management purposes only, no spaces can be used
-   ii.  **Description**: <optional>
+   a. Select the **Statistics** tab.
 
-   iii. **Health** **Monitor**: http
+   b. Reset the pool statistics.
 
-b. Under **Resources**
+   c. Browse to your virtual server and refresh several times.
 
-   i.   **Load Balancing Method**: <leave at the default Round Robin>
+   d. Refresh you statistics.
 
-   ii.  **Priority Group Activation**: <leave at default>
+   e. Are all members taking connections?
 
-   iii. **New Members**:
+   f. Which member isn’t taking connections?
 
-+-------------+------------------+
-| **Address** | **Service Port** |
-+=============+==================+
-| 10.1.20.11  | 80               |
-+-------------+------------------+
-| 10.1.20.12  | 80               |
-+-------------+------------------+
-| 10.1.20.13  | 80               |
-+-------------+------------------+
+7. Let’s simulate a maintenance window, or an outage, by disabling a
+   pool member in the highest priority group. As this will drop the
+   number of active members below 2, this should cause the low priority
+   group to be activated.
 
-1. As you enter each IP address and port combination hit **Add** button
+8. Select the member in the Priority Group 2 and Disable that pool
+   member.
 
-c. When you have complete your pool configuration, hit the **Finished**
-   button
+   a. Select the **Disable** button
 
-.. image:: /_static/101/image17.png
-   :width: 4.375in
-   :height: 1.27287in
+..
 
-Creating Virtual Servers
-------------------------
+   .. image:: /_static/101/image29.png
+      :width: 6.9739in
+      :height: 1.24444in
 
-Now let’s build our virtual server
+b. The status indicator now goes to black, indicating the member has
+   been disabled
 
-1. Under **Local Traffic** select **Virtual Servers** then select
-   **Create**.
+1. Once again, select **Statistics**, reset the pool statistics, browse
+   to the virtual server and see which pool members are taking hits now.
 
-.. image:: /_static/101/image18.png
-   :alt: C:\Users\RASMUS~1\AppData\Local\Temp\SNAGHTML5118b969.PNG
-   :width: 3.71994in
-   :height: 3.08333in
+.. tip:: Once you are done testing re-enable your disabled pool member.
 
-a. Under **General Properties**
-
-   i.   **Name:** www_vs
-
-   ii.  **Description**: <optional>
-
-   iii. **Type:** Standard
-
-   iv.  **Source/Address:** <leave blank>
-
-        .. note:: The default is 0.0.0.0/0, all source IP address are allowed
-
-   v.   **Destination** **Address/Mask:** 10.1.10.100
-
-        .. note:: The default mask is /32
-
-   vi.  **Service Port**: 80 or HTTP
-
-b. Under **Configurations**
-
-   i.  The web servers do not use the BIG-IP LTM as the default gateway.
-       This means return traffic will route around the BIG-IP LTM and
-       the TCP handshake will fail. To prevent this we can configure
-       SNAT Automap on the Virtual Server. This will translate the
-       client IP to the self IP of the egress VLAN and ensure the
-       response returns to the BIG-IP.
-
-   ii. **Source Address Translation**: Auto Map
-
-  .. image:: /_static/101/image19.png
-      :alt: C:\Users\RASMUS~1\AppData\Local\Temp\SNAGHTML58387b2.PNG
-      :width: 2.97587in
-      :height: 0.99517in
-
-c. Under **Resources**
-
-   i.   **iRules**: none
-
-   ii.  **Policies**: none
-
-   iii. **Default Pool**: From the drop down menu, select the pool
-        (**www_pool**) which you created earlier
-
-   iv.  **Default Persistence Profile**: None
-
-   v.   **Fallback Persistence Profile**: None
-
-1. When you have complete your pool configuration, hit the **Finished**
-   button
-
-2. You have now created a Virtual Server
-
-.. image:: /_static/101/image20.png
-   :width: 6.75892in
-   :height: 1.44179in
-
-.. note:: Items in the GUI that are blue are links ie. shortcuts
-
-3. Now let’s see if our virtual server works!
-     - **UDF** - from the ubu-jumpbox go to http://10.1.10.100
-     - **AWS** - from your PC go to http://<Bigip1VipEipTo100> in your stack Output tab
-
-   a. Open the browser to the Virtual Server you just created
-
-   b. Refresh the browser screen several times (use “<ctrl>” F5)
-
-.. image:: /_static/101/image21.png
-   :width: 2.65963in
-   :height: 1.40625in
-
-a. Go to your BIG-IP and view the statistics for the **www_vs** virtual
-   server and the **www_pool** pool and its associated members
-
-c. Go to **Statistics > Module Statistics > Local Traffic**
-
-   i. Choose **Virtual Servers** from drop down
-
-.. image:: /_static/101/image22.png
-   :width: 2.98593in
-   :height: 1.44792in
-
-a. Go to **Local** **Traffic>Virtual Servers>Statistics**
-
-d. Go to **Local** **Traffic>Pools>Statistics**
-
-   i.   Did each pool member receive the same number of connections?
-
-   ii.  Did each pool member receive approximately the same number of
-        bytes?
-
-   iii. Note the Source and Destination address when you go to directly
-        and through the virtual server
-
-1. Let’s archive our configuration in case we have to fall back later.
-
-   a. Go to **System >> Archives** and select **Create**.
-
-      i. Name your archive **lab2_the_basics_net_pool_vs**
-
-ExtraCredit!
+Monitor Labs
 ------------
 
-You can also review statistics via the CLI, simply SSH to the management
-IP of your BIG-IP. Refer to your Student Information page and Network
-Diagram for the IP address.
+Objective:
 
-1. Check out the Linux CLI and TMSH
+-  Build a default monitor for nodes
 
-   a. Review the information of the following command:
+-  Build a content monitor for your pool
 
-      iii. **bigtop –n**
+Default Monitors
 
-           1. Type **q** to quit.
+1. Go to **Local Traffic>Nodes**, note the Status.
 
-   a. Take a look at the TMOS CLI, type “\ **tmsh**\ ” to enter the
-      Traffic Management Shell.
+   a. Notice there are Nodes in this table even though we never
+      specifically configured them under the Node portion of the GUI.
+      Each time a unique IP address is placed in a pool, by default, a
+      corresponding node entry is added and assigned the default monitor
+      (if any).
 
-      i.   (tmos)# **show ltm pool**
+   b. Select the **Default Monitor** tab.
 
-      ii.  (tmos)# **show ltm pool detail**
+.. image:: /_static/101/image30.png
+   :width: 4.2837in
+   :height: 2.06685in
 
-           1. show statistics from all pools
+c. Notice we have several options, for nodes you want a generic monitor,
+   so we will choose **icmp**.
 
-      iii. (tmos)# **show ltm virtual**
+d. Select **icmp** from the **Available** box and hit |image3| to place
+   it in the **Active** box.
 
-      iv.  (tmos)# **show ltm virtual detail**
+e. Click on the **Update** button to finalize your changes.
 
-           1. Show statistics of all virtual servers
+10. Select **Node List** or **Statistics** from the top tab.
 
-2. Check out the Dashboard!
+    a. What is the Status of the Nodes?
 
-   a. Go to **Statistics>Dashboard**
+11. Select **Statistics>Module Statistics>Local Traffic**
 
-.. image:: /_static/101/image23.png
-   :alt: C:\Users\RASMUS~1\AppData\Local\Temp\SNAGHTML59e5bf2.PNG
-   :width: 3.13542in
-   :height: 1.81755in
+    a. What is the Status of your Nodes, Pool and Virtual Server?
 
-2. Click the Big Red F5 ball. This will take you to the Welcome page.
-   Here you can find links to:
+Content Monitors
+----------------
 
-   a. User Documentation, Running the Setup Utility, Support, Plug-ins,
-      SNMP MIBs
+The default monitor simply tells us the IP address is accessible, but we really don’t know the status of the particular application the node supports. We are now going to create a monitor to specifically test the application we are interested in. We are going to basic contnet check of our web site to determine it the servers are responding properly.
+
+1. Browse to **http://10.1.10.100**.  You have an number of content items you could use to check the site status.  You could check for text on this page. You could view the source code and check for a text string not normally visible to the user. You can also look in the HTTP header information being returned. 
+
+2. We will be looking for the HTTP status “\ **200 OK**\ ” in the HTTP header infomration as our receive string to determine availability.
+
+1. Select **Local Traffic>Monitor** on the side-bar and select the plus
+   (**+**) sign or the **Create**
+
+.. image:: /_static/101/image32.png
+   :width: 3.78002in
+   :height: 2.46226in
+
+a. Now we can create a monitor to check the content of our web page to
+   ensure things are running properly.
+
+   i.  **Name**: www_test
+
+   ii. **Type**: HTTP
+
+.. image:: /_static/101/image33.png
+   :width: 1.93333in
+   :height: 2.56016in
+
+b. Once you have selected your parent (Type) monitor, you can access the **Configuration** section
+
+   i.   **Send String**: Enter the command to retrieve the page you want **GET /index.php HTTP/1.0\\r\\n\\r\\n**
+
+   ii.  In the Receive String box put “\ **200 OK**\ ” (no quotes)
+
+   .. image:: /_static/101/image34.png
+      :alt: Monitor configuration
+      :scale: 75
+
+.. note:: The receive string is not case sensitive.
+
+c. Click **Finish** and you will be taken back to **Local
+   Traffic>Monitors**
+
+..
+
+   .. image:: /_static/101/image35.png
+      :width: 0.94444in
+      :height: 0.55556in
+
+1.  Where is your new Monitor?
+
+    a. **Hint:** Check the lower right hand corner of the Monitors list,
+       here you can go to the next page or view all Monitors
+
+    b. You can change the number of records displayed per page in
+       **System>Preferences**
+
+2.  Go to **Local Traffic>Pools>www_pool** and choose **Properties**
+    from the top bar.
+
+    a. Remove the **http** monitor from the Active box.
+
+    b. Select the **www_test** monitor from the Available monitor’s
+       window in the **Configuration** section and move it to the Active
+       window.
+
+.. image:: /_static/101/image36.png
+   :width: 3.76042in
+   :height: 3.10417in
+
+14. Hit **Update** to apply the change.
+
+    a. Select **Statistics** from the tabs.
+
+    b. What is the status of the pool and its members?
+
+15. Go to **Local Traffic>Virtual Servers**, what is the status of your
+    virtual server?
+
+    a. Browse to your **www_vs** virtual server. Which members are
+       taking traffic?
+
+    b. Just for fun reverse the monitor. Now when **200 OK** is returned
+       it indicates the server is not responding successfully. You can
+       see where this would be useful if you were looking for a 404 (bad
+       page) response.
+
+
+
+Persistence Labs
+----------------
+       
+In this lab we will configure a couple types of persistence and view their behavior. For persistence, profiles will have to be created and attached to our virtual server.
+       
+       Lab Requirements:
+       
+       -  Prior to beginning the lab verify your **www_pool** has been set to
+          the following parameters:
+       
+          -  **Load Balancing Method**: Round Robin
+       
+          -  **Priority Group Activation**: Disable
+       
+             -  The members **Ratio** and **Priority** **Group** mean nothing
+                since we aren’t using Ratio load balancing and Priority Groups
+                are disabled.
+       
+          -  Hit **Update**
+       
+          -  Hit your virtual server several times, you should see all 3
+             servers respond.
+       
+       Simple (Source Address) Persistence
+       -----------------------------------
+       
+       1. Go to **Local** **Traffic>Profiles** and select the **Persistence**
+          tab.
+       
+          a. From the **Persistence Profiles** screen select the **Create**
+             button.
+       
+         .. image:: /_static/101/image37.png
+            :scale: 75
+      
+       b. At the **New Persistence Profile** screen enter:
+       
+          i.  **Name**: my-src-persist
+       
+          ii. **Persistence** **Type**: Source Address Affinity
+       
+       .. image:: /_static/101/image38.png
+          :width: 2.61621in
+          :height: 2.04167in
+       
+       c. This will add the **Configuration** section to the **General**
+          **Properties** section.
+       
+          i. Note the parent profile.
+       
+       d. In the **Configuration** section, set the
+       
+          i.   **Timeout**: 60 seconds
+       
+          ii.  **Prefix Length**: None
+       
+               1. This is the default, and is a /32 prefix (255.255.255.255 mask).
+       
+               2. Each new IP address will create a new persistence record.
+
+.. hint::
+   You can’t change the settings until you have checked the Custom box.  Hey, I didn’t write the GUI, but actually this is very useful in knowing which configuration items were modified from the default.
+
+|
+          iii.  Click the Finished button.
+       
+       e. You have just created your first custom Profile.
+       
+          i. Note the check box for your new custom profile isn’t grayed out
+             and can be selected to allow you to delete the profile if desired.
+       
+       1. Now let’s attach our new profile to the virtual server.
+       
+          a. Go to **Local Traffic>Virtual Server** and ….
+       
+             i.  Select **www_vs** and the **Resources** tab or ….
+       
+             ii. Take the shortcut directly to the **Resources** of the virtual server. (Can you find it?)
+
+      .. note:: 
+         When we created the Virtual Server everything was on a single page, we find when we return to modify the Virtual Server the Properties and Resources are on different pages.
+      
+      |
+       b. Set the **Default Persistence Profile** to **my-src-persist**.
+       
+       .. image:: /_static/101/image39.png
+          :width: 3.41667in
+          :height: 1.90957in
+       
+       c. Don’t forget to **Update** before leaving the page. *(Be careful,
+          someday I will quit telling you that.)*
+       
+       d. Testing Source Address Affinity
+       
+          i.   At this point you may want to open a second browser window to
+               the management GUI.
+       
+          ii.  For one management window go to **Statistics>Module
+               Statistic>Local Traffic**
+       
+          iii. Select **Persistence Records** for the **Statistics Type** menu
+       
+       .. image:: /_static/101/image40.png
+          :width: 4.47075in
+          :height: 2.22917in
+       
+       1. At this point you will see that Persistence Records statistics
+          display has been disabled in version 12.1. A TMSH database command is
+          required to activate it.
+       
+          a. SSH to you BIG-IP.
+       
+          b. At the prompt enter: **tmsh**
+       
+          c. At the TMSH prompt enter the command in the **Persistence Value** GUI.
+
+            .. admonition:: TMSH
+
+               modify sys db ui.statistics.modulestatistics.localtraffic.persistencerecords value true**
+               
+Tab completion will make this a little easier
+            
+       1. Now, in this window you can watch you persistence records. You may
+          want to set **Auto Refresh** to 20 seconds.
+       
+       .. image:: /_static/101/image41.png
+          :width: 4.8125in
+          :height: 1.80366in
+       
+       1. In your other management GUI window go to **www_pool** and clear the
+          member statistics.
+       
+          a. Open a browser session to your virtual server and refresh several
+             times.
+       
+          b. How many members are taking traffic?
+       
+          c. Check your Persists Records window, are the any persistence
+             records?
+       
+             i. If you are not Auto Refreshing, don’t forget to hit Refresh
+       
+          d. Refresh your web page prior to the Age column reaching 60. What
+             happens?
+       
+       Cookie Persistence (Cookie Insert)
+       ----------------------------------
+       
+       1. Go to **Local Traffic>Profiles>Persistence** tab and hit **Create**
+       
+       a. Let’s name our profile **my_cookie_insert** (original isn’t it)
+       
+       b. Our **Persistence Type** will be **Cookie**
+       
+       c. This brings us to the **Configuration** section.
+       
+       .. image:: /_static/101/image42.png
+          :width: 3.59403in
+          :height: 3.15625in
+       
+       1. As you can see the default **Cookie Method** is **HTTP** **Cookie**
+          **Insert**, so we won’t have to modify the Cookie Method
+       
+       a. The BIG-IP will also create a cookie name for you using a combination
+          of “\ **BIGipServer**\ ” and the pool name the virtual server
+          service. We will take this default also.
+       
+       b. We will use a session cookie. Which means the cookie is deleted when
+          the browser is closed.
+       
+       c. Select **Finished**
+       
+       d. Now attach your cookie persistence profile to your virtual server’s
+          **Default Persistence Profile**
+       
+       Go to **Local Traffic>Virtual Server>www_vs>Resources** tab
+       
+       e. Set the **Default Persistence Profile** to **my_cookie_insert**
+       
+       f. Hit **Update**
+       
+       g. Whoa! Did you just get this error message?
+       
+       .. image:: /_static/101/image43.png
+          :width: 4.64151in
+          :height: 1.83072in
+       
+       h. Remember what we said earlier about some Profiles requiring
+          prerequisite Profiles? Since we are looking in the HTTP header for
+          the cookie the prerequisite for the Cookie Profile is the HTTP
+          profile.
+       
+       1. We will have to go to the virtual server to add the HTTP profile,
+          prior to adding the Cookie Persistence profile.
+       
+          a. Select the **Properties** tab on your virtual server
+       
+          b. Go to **HTTP Profile** in the **Configuration** section and select
+             the default HTTP (**http**) profile.
+       
+       .. image:: /_static/101/image44.png
+          :width: 3.13229in
+          :height: 3.69328in
+       
+       c. Hit the **Update** button
+       
+       d. Now we can go back to the **Resource** tab and add our cookie
+          persistence profile.
+       
+       1. Testing cookie persistence.
+       
+          a. If you wish you can watch the member statistics to validate your
+             persistence.
+       
+          b. Open a new browser session to your virtual server and refresh
+             several times.
+       
+          c. Does the page ever change?
+       
+          d. Did you hit a different server?
+       
+          e. Refresh several times. Are you hitting the same server?
+          f. Let's take a look at the cookie.
+       
+             i. On the web page of the demo application right click and select **Inspect**. This should work on most browsers.
+             ii. In the **Element** bar of the Inspect window select **Network** and refresh your web page.
+             iii. In the **Name** section of the Inspect window on the content select **f5demo.css** and **Cookies** on the **Name** bar.  Here you will see the BIG-IP cookie that was inserted.
+
+             .. tip::
+               **Inspect** is your friend.  Learn to use it.  It will aid in debugging, iRules, monitors and more.
+       
+.. image:: /_static/101/image45.png
+   :alt: Inspect page window
+   :scale: 50
+   :align: center
+       
+Archive your work in the file: **lab3_lb_monitor_and_persist**

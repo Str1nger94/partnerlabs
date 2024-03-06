@@ -1,164 +1,180 @@
-Lab 4: SSL Offload and Security
-===============================
+Lab 5: Support and Troubleshooting
+==================================
 
-In this Lab we will configure client side SSL processing on the BIG-IP.
+In this lab you will review your BIG-IP using iHealth and perform some
+basic troubleshooting commands
 
 Objective:
 
--  Create a self-signed certificate
+-  Get a QKView and upload it to http://ihealth.f5.com and review the
+   results.
 
--  Create a client SSL profile
+-  Perform a TCPDump to watch traffic flow.
 
--  Modify your HTTP virtual server to use HTTPS
+-  Obtain web page information via Curl.
 
--  Add addition security to your HTTPS web server using the HTTP profile
+Archive the current configuration and perform a health check using a QKview
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-We will create a self-signed certificate and key and a SSL client
-profile to attach to our virtual server.
+1. Obtain a **QKView**. Go to **System > Support**
 
-Creating a Self-signed certificate and key
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   a. Here under **System>Support>Manage iHealth Credentials** you can
+      enter you iHealth (F5) credentials
 
-1. Go to **System > Certificate Management > Traffic Certificate
-   Management > SSL Certificates** **List** and select **Create**
+c. From **System>Support** select the **New Support Snapshot** button to
+   create a QKView
 
-.. image:: /_static/101/image52.png
-   :width: 5.83333in
-   :height: 1.83891in
+   a. From here you can create and upload a qkview, just create a qkview
+      or create a TCPDump
 
-This will take you to **Local Traffic >> SSL Certificates >> New SSL
-Certificate…**
+   .. image:: /_static/101/image64.png
+      :width: 4.13816in
+      :height: 4.01299in
 
-a. NOTE: The default key size is **2048**, you can save SSL resources on
-   the **server-side** by lowering this key size.
+1. Import the QKView into iHealth if you did not automatically upload
+   the QKview to iHealth.
 
-.. image:: /_static/101/image53.png
-   :width: 2.60099in
-   :height: 2.75581in
+d. Go to http://ihealth.f5.com. If you don’t have an account, now is the time to create one and then skip to the next section **Troubleshoot using TCPDump or Curl** because it will take time for your account set up.**
 
-b. Enter:
+e. Select **Upload to iHealth** button and upload the QKView file you
+   download from your BIG-IP
 
-   i.   **Name**: my-selfsigned-cert
+f. Once the file is uploaded you can click on the hostname to view you
+   the heuristics.
 
-   ii.  **Issuer**: Self
+   i.  Note the Diagnostics. Go to **Diagnostics > Critical** on the
+       side-bar.
 
-   iii. **Common Name**: www.f5demo.com
+       1. Example: **The configuration contains user accounts with
+          insecure passwords** is because we are using default
+          passwords.
 
-   iv.  Fill out the rest any way you would like.
+   ii. Select **Network > Virtual Servers**, then click on the small
+       white triangles to expand the view or go to **Pools**, then
+       **Pool Members** to continue to expand the view.
 
-Creating SSL Client Profile
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
+       1. This is a little more detailed than **Local Traffic > Network
+          Map**
 
-1. Go to **Local** **Traffic>Profiles>SSL>Client** menu and select
-   **Create**.
+   .. image:: /_static/101/image65.png
+      :width: 3.03774in
+      :height: 2.13701in
 
-.. image:: /_static/101/image54.png
-   :alt: C:\Users\RASMUS~1\AppData\Local\Temp\SNAGHTMLf292a2.PNG
-   :width: 2.15302in
-   :height: 1.94805in
+g. Want to know interesting CLI commands, go to **Commands > Standard**
+   and expand **tmsh** then **LTM** and click on **show /ltm virtual**
+   toward the bottom.
 
-a. Under **General Properties**
+h. Under **Files > config** you can view the **bigip.conf** file and see
+   the command lines you used for you build.
 
-   i. **Name**: my_clientssl_profile
+   i. All the **log** files are here too
 
-b. Under **Configuration** in the **Certificate Key Chain** section,
-   select the **Custom** box and hit **Add**.
+i. Feel free to just poke around.
 
-   i.  In the **Add SSL Certificate to Key Chain** pop-up select:
+Troubleshoot using TCPDump or Curl.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-       1. **Certificate**:         my-selfsigned-cert
+1. Go to your **www_vs (10.1.10.100)** virtual server and set **Source Address Translation** to **None**.
 
-       2. **Key**:                     my-selfsigned-cert
+   a. Now browse the web site. You will not be able to access it even though
+      the status of the virtual is available.
 
-   ii. Select **Add**
+      i. Because BIG-IP is not the server’s default gateway the server's response goes around the BIG-IP.
 
-.. image:: /_static/101/image55.png
-   :width: 2.23377in
-   :height: 1.08439in
+   a. The web administrator tells you everything is fine as far as he
+      can see and thinks the issue is with the BIG-IP, because they
+      ALWAYS think the issue is with the BIG-IP.
 
-c. Hit **Finished.**
+   b. You begin by debugging the client connections to the web servers
+      through the BIG-IP using TCPDump.
 
-Building our New Secure Virtual Server
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+2. SSH to the management port of your BIG-IP. Remember the BIG-IP is a
+   full proxy. You will need two TCP dumps and therefore two SSH windows for
+   the client-side connection and the server-side connection.
 
-1. Go to **Local Traffic>Virtual Servers** and hit the Create button or
-   hit the “+” next to Virtual Servers
+   a. First let’s see what if we are hitting the virtual server. At the
+      Linux CLI prompt:
 
-   a. **Name**: secure_vs
+      i. **tcpdump –i <client vlan name> host –X –s128 10.1.10.100 and
+         port 80**
 
-   b. **Destination Address/Mask**: 10.1.10.105
+         1. This is a little overkill, but a good example of syntax. We
+            will only look at traffic headed for the virtual server, we
+            will see the first 128 bytes (-s128) in ASCII (-X).
 
-   c. **Port**: 443 or HTTPS
+   b. Go to your browser and attempt to access the virtual server. You
+      should see something like this:
 
-   d. **SSL Profile (Client)**: my_clientssl_profile (the profile you
-      just created)
+.. code::
 
-   e. **Source Address Translation**: Auto Map (remember why we need
-      this?)
+   17:38:40.051122 IP 10.1.10.1.43932 > 10.1.10.100.http: S522853636:522853636(0) win 8192 <mss 1460,nop,wscale 2,nop,nop,sackOK>
+   0x0000: 0ffe 0800 4500 0034 0a40 4000 4006 0699 ....E..4.@@.@...
+   0x0010: 0a80 0a01 0a80 0aeb ab9c 0050 1f2a 1d04 ...........P.*..
+   0x0020: 0000 0000 8002 2000 3d10 0000 0204 05b4 ........=.......
+   0x0030: 0103 0302 0101 0402 ........
+   17:38:40.051169 IP 10.1.10.100.http > 10.1.10.1.43932: S 245310500:245310500(0) ack 522853637 win 4380 <mss 1460,sackOK,eol>
+   0x0000: 0ffe 0800 4500 0030 27ef 4000 ff06 29ed ....E..0'.@...).
+   0x0010: 0a80 0aeb 0a80 0a01 0050 ab9c 0e9f 2424 .........P....$$
+   0x0020: 1f2a 1d05 7012 111c 2a0e 0000 0204 05b4 .*..p...*.......
+   0x0030: 0402 0000 ....
+   17:38:40.053644 IP 10.1.10.1.43932 > 10.1.10.100.http: . ack 1 win 64240
+   0x0000: 0ffe 0800 4500 0028 0a41 4000 4006 06a4 ....E..(.A@.@...
+   0x0010: 0a80 0a01 0a80 0aeb ab9c 0050 1f2a 1d05 ...........P.*..
+   0x0020: 0e9f 2425 5010 faf0 7018 0000 ..$%P...p...
+   17:38:40.053648 IP 10.1.10.1.43932 > 10.1.10.100.http: P 1:416(415) ack 1 win 64240
+   0x0000: 0ffe 0800 4500 01c7 0a42 4000 4006 0504 ....E....B@.@...
+   0x0010: 0a80 0a01 0a80 0aeb ab9c 0050 1f2a 1d05 ...........P.*..
+   0x0020: 0e9f 2425 5018 faf0 43c5 0000 4745 5420 ..$%P...C...\ GET.
+   0x0030: 2f20 4854 5450 2f31 2e31 0d0a 486f 7374 /.HTTP/1.1..Host
+   0x0040: 3a20 3130 2e31 3238 2e31 302e 3233 350d :.10.1.10.100.
 
-   f. **Default Pool**: www_pool
+c. From the dump you can see you are are hitting the virtual server.  Your original client IP is in the first line of
+   the dump *16:44:58.801250 IP* **<client_ip>.41536** > **10.1.10.100.http:** going to the virtual server.  The dump clip shows the TCP three-way handshake between the client and the virtual server and the initial part of the request **GET/ HTTP/1.1 Host: 10.1.10.100**
 
-   g. Default all other settings. (Notice you did not require an HTTP
-      profile)
+1. In the second SSH window we will do an expanded **tcpdump** for the
+   sake of interest.
 
-   h. **Finish**
+   a. **tcpdump –i <server vlan name> -X –s128 host <client IP>**
 
-2. Testing our secure server. 
-      - **UDF** - Go to you **secure_vs** at **https://10.1.10.105**
-      - **AWS** - Go to Go to you **secure_vs** at **https://<Bigip1VipEipTo105>**
+   b. Hit your virtual server again. You see packets with your client IP heading for the servers. They just aren’t responding. So we could reasonably suspect a server issue.
 
-   a. If you want to watch member traffic, go to the **www_pool** and
-      reset the statistics.
+2. First, let’s check to see if the server is responding to HTTP on port 80. On the BIG-IP in an SSH window:
 
-   b. Browse to your secure virtual server
+   a. Do a **<ctrl-c>** to escape out of **tcpdump**, if you are still
+      in it, and use **curl** to test the server.  You should get output akin to whats below.
 
-   c. What port did you pool members see traffic on?
+.. code::
+   
+   curl –i <server ip of a pool member
 
-Securing web applications with the HTTP profile
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+You should get output akin to what is below. The **-i** switch tells **curl** to output the HTTP header information also.
 
-1. Let’s begin by creating a custom HTTP profile.
+.. code::
 
-   a. Go to **Local Traffic> Profiles>Services**, select HTTP create a
-      new profile
+   [admin@ip-10-1-1-4:Active:Standalone] ~ # curl -i 10.1.20.11
+   HTTP/1.1 200 OK
+   Date: Tue, 29 Jun 2021 18:49:41 GMT
+   Server: Apache/2.4.10 (Debian)
+   X-Powered-By: PHP/7.0.17
+   Cache-Control: no-cache
+   Vary: Accept-Encoding
+   X-COLOR: (null)
+   Content-Length: 7819
+   Content-Type: text/html; charset=UTF-8
 
-   b. Under **General Properties**
+   <!DOCTYPE html>
+   <html lang="en">
+     <head>
+       <meta charset="utf-8">
+       <meta http-equiv="X-UA-Compatible" content="IE=edge">
+       <meta name="viewport" content="width=device-width, initial-scale=1">
+       <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
+       <title>F5 vLab | Home</title>
+   
 
-      i. **Name**: secure-my-website
+b. The server is responding to the BIG-IP when directly connected, but
+   not through the virtual server. Sounds like the server is routing
+   around the BIG-IP, which means the BIG-IP is not the default gateway.
 
-   c. Under **Settings**:
+Turn **SNAT Automap** back on the **www_vs** virtual server
 
-      i.   Set the **Fallback Host**: https://www.f5.com *(this will take you an alternate site)*
-
-      ii.  **Fallback on Error Codes**: 404 *(fallback site if a 404 error is received)*
-
-      iii. **Response Headers Allowed**: Content-Type Set-Cookie
-           Location
-
-      iv.  **Insert XForwarded For**: Enabled *(to save the original client ip)*
-
-.. image:: /_static/101/image56.png
-   :alt: C:\Users\RASMUS~1\AppData\Local\Temp\SNAGHTML566674e6.PNG
-   :width: 3.25in
-   :height: 3.44635in
-
-d. Attach your new HTTP Profile to your secure (HTTPS) virtual server
-
-1. Browse to your secure virtual server.
-
-   a. Do web pages appear normal?
-
-   b. Now browse to a bad page.
-
-   c. For example,
-
-      i. What is the result?
-
-   d. Using your browser Inspect window check the server response.  Altenately you can to the **Request and Response Headers** from the **Demo** drop-down menu to view the headers. You should see your sanitized server response and the original client IP address in the **x-forward-for** header, which is itself new.
-
-   a. You can compare the headers by accessing your HTTP virtual server your unsecure **www_vs** and looking at the responses.
-
-.. note:: 
-   Even though the data is encrypted between your browser and the virtual server, the LTM can still modify the data (i.e. resource cloaking) because the data is unencrypted and decompressed within TMOS.
-
-Archive your work in a file called: **lab5_security**

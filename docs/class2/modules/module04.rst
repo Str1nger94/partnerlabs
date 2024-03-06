@@ -1,145 +1,136 @@
-Lab 3: Accelerating Applications Lab
-====================================
+Lab 4: BIG-IP Policies and iRules
+=================================
 
-Objectives:
+In your customers environment the web servers retrieve images from a
+different set of servers. In the lab you will write and iRule and create
+a BIG-IP policies so you can compare and contrast the to methods. iRules
+are more flexible and customizable, while BIG-IP policies are easier to
+use, require no coding skills and are a little more efficient when
+performing the same task.
 
--  Assign client-side and server-side profiles
+Write an iRule to retrieve images when an HTTP request is received
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
--  Set up caching for your web site
+When HTTP request is received, look at the HTTP URI. If the URI ends
+with **jpg** or **png** send the request to an alternate pool of image
+servers.
 
--  Set up compression for your web site
+1. **Create** a new pool named **image_pool**, use the **http** monitor
+   for status and add one member **10.1.20.14:80**.
 
-Lab Prerequisites:
+2. Go to **Local Traffic > iRules > iRules List** and select the create
+   button.
 
--  Prior to starting this lab remove the cookie persistence profile from
-   you virtual server.
+   a. **Names:** retrieve_images
 
-TCP Express
-~~~~~~~~~~~
+   b. **Definition:**
 
-1. Set clientside and serverside TCP profiles on your virtual server
-   properties.
+.. code::
 
-a. If you chose to use the **Advaced** menu you will see a whole array
-   of new options. There are **Basic** and **Advanced** drop downs on
-   many of the GUI menus. You can always see **Advanced** menus by
-   changing the preferences in **System>Preferences.**
+   # If the content is a jpeg or portable graphic (png) go to the image pool
+   when HTTP_REQUEST {
+      if { ([HTTP::uri] ends_with "jpg") or ([HTTP::uri] ends_with "svg") }
+      {
+         pool image_pool
+      }
+   }
 
-b. From the dropdown menus place the **tcp-wan-optimized** profile on
-   the client-side and the **tcp-lan-optimized** profile on the
-   server-side.
+c. Note the highlighted content, hover the pointer over HTTP_REQUEST and HTTP::uri to
+   get information on the event and command.
 
-..
+3. Go to **Local Traffic > Virtual Servers** and open the **secure_vs**
+   virtual server. Go to the **Resources** section.
 
-   .. image:: /_static/101/image46.png
-      :alt: C:\Users\RASMUS~1\AppData\Local\Temp\SNAGHTML30460794.PNG
-      :width: 5.59375in
-      :height: 4.70384in
+   a. Under **iRules** select the **Manage** button and put the
+      **retrieve_images** iRule into the **Enabled** box and add the
+      iRule to the virtual server.
 
-HTTP Optimization - RamCache Lab
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      i. What other profile did this iRule require to work?
 
-1. Go to your virtual server and refresh server times. Note the color of the borders and pictures and 12 digit lpha-numeric code. These change depending on the server the connection for that particular request is load balanced too.
+4. Test your policy by going to https://10.1.10.105, you will want to
+   use an incognito/private browsing window to avoid cached content.
 
-2. Go to **Local Traffic>Profiles>Services>Web Acceleration** or
-   **Acceleration>Profiles>Web Acceleration**
+a. Test your policy.  If you browse at your unsecured virtual server you will see there are multiple colors to the images, but browser the secure virtual server and all the image colors are the same because all the images were pulled from the same server (10.1.20.14) 
 
-a. Create a new profile named **www-opt-caching** using
-   **optimized-caching** as the Parent Profile.
-
-b. Take all the defaults, no other changes are required.
-
-3. Open up your **www_vs** virtual server.
-
-a. At the **HTTP Profile** drop down menu make sure **http** is
-   selected.
-
-b. Under **Acceleration** at **Web Acceleration** **Profile** select
-   your new caching profile; **www-opt-caching**
-
-c. Clear the statistics on your pool and the refresh the main web page
-   several times.
-
-   i.  The pictures do not change. Why do you think that is?
-
-   ii. Go to your pool. Are all pool members taking connections?
-
-4. Now go to **Statistics>Module Statistics>Local Traffic** on the
-   sidebar, from the **Statistics Type** drop down menu select
-   **Profiles Summary**
-
-.. image:: /_static/101/image47.png
-   :alt: C:\Users\RASMUS~1\AppData\Local\Temp\SNAGHTML1165ae63.PNG
-   :width: 3.55238in
-   :height: 2.125in
-
-5. Select the View link next to the **Web Acceleration** profile type
-
-.. image:: /_static/101/image48.png
-   :width: 1.91667in
-   :height: 1.20833in
-
-.. image:: /_static/101/image49.png
-   :width: 4.45349in
-   :height: 1.26124in
-
-6. You can get more detailed information on ramcache entries at the CLI
-   level
-
-a. Log onto the CLI of your BIG-IP via SSH.
-
-b. At the CLI go into **tmsh** at the **(tmos)#** prompt
-
-c. At the shell prompt enter **show ltm profile ramcache www-opt-caching**
-
-HTTP Optimization - HTTP Compression Lab
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Before starting this lab, go to the main page for the **F5 vLab** demo application and select the **Demos** drop down menu from the top and then **Request and Response Headers**.
-
-.. image:: /_static/101/image49a.png
-   :alt: Demos drop-down :menuselection:
-   :scale: 20
+.. image:: /_static/101/image57.png
    :align: center
+   :width: 500
 
-You'll note the browser is sending an **accept-encoding** header telling the server how to compress data to send back to the browser.  Without the **accept-encoding** header the server will not compress content even if the server is programmed to do so.
+b. Where is non-image requests go?  You can get an idea by clearing the pool statistics and reloading the page.
 
-.. image:: /_static/101/image49b.png
-   :alt: Demos drop-down :menuselection:
-   :scale: 25
+Use a BIG-IP Policy to retrieve images from a different pool 
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+In this task you are going to the same thing as above, except you will
+use a BIG-IP policy.
+
+1. First you create your policy container and set your match strategy.
+   Try to do this using the instructions, but a screen shot of the
+   policy is available in the **Appendix** at the end of the lab guide
+   if you would like it.
+
+2. Go to **Local Traffic ›› Policies : Policy List** and select
+   **Create**
+
+   a. **Policy_Name:** access_image_pool
+
+   b. **Strategy:** Execute **first** matching rule.
+
+   c. **Create Policy**
+
+   .. image:: /_static/101/image58.png
+      :width: 2.67708in
+      :height: 1.36123in
+
+3. Now you can create/view policy rules. Select **Create**.
+
+   a. **Name:** get_images
+
+   b. In the box under **Match all the following conditions:** select
+      the **+** to the right of **All traffic**
+
+      i. Use the top drop down menu to select **HTTP URI**, on the next
+         line of dropdown boxes select:
+
+         1. **extension ends_with any of** (**Add** *jpg* and *svg*) at
+            **request** time
+
+   c. Under **Do the following when the traffic is matched:** build the
+      following operation.
+
+      i. **Forward Traffic** to **pool** **Common/image_pool** at
+         **request** time.
+
+   .. image:: /_static/101/image60.png
+      :width: 500
+      :align: center
+
+d. **Save**
+
+1. The policy is saved in **Draft** form and is not available/update
+   until **Published**. To publish the policy:
+
+a. Select the **Save Draft Policy** drop-down menu and select **Save and
+   Publish Policy**.
+
+   .. image:: /_static/101/image61.png
+      :width: 2.47917in
+      :height: 1.75529in
+
+1. Go to the **Resources** section of your **secure_vs** virtual server.
+
+a. For **iRules**, select **Manage** and REMOVE the **retrieves_images** iRule from the virtual server.
+
+b. For **Policies**, select **Manage** and move **access_image_pool** from the **Available** box to the
+   **Enabled** box and hit **Finished**
+
+.. image:: /_static/101/image62.png
+   :alt: Virtual Server - Resource Management - Policy screen
    :align: center
+   :width: 400
 
-1. Go to **Local Traffic>Profiles>Service>HTTP Compression** or
-   **Acceleration>Profiles>Web Acceleration**
+1. Test your policy.  If you browse at your unsecured virtual server you will see there are multiple colors to the images, but browser the secure virtual server and all the image colors are the same because all the images were pulled from the same server (10.1.20.14).  You can also use pools statistics to determine results. 
 
-.. hint::
-   There are so many **Services** profile that the top of the pop-up will be invisible from the browser window.  In that case you can simply select **Local Traffic>Profiles>Services** and then select the **Services** drop down from the top bar to get to all the profiles.
-
-         a. We are going to do anything fancy.  Create a new profile, **www-compress** using the
-         **wan-optimized-compression** default profile.
-   
-2. Open up your **www_vs** virtual server.
-
-a. At the **HTTP Profile** drop down menu make sure **http** is
-   selected.
-
-b. At the **Web Acceleration** drop down menu select **None**
-
-   - *For purpose of this lab we don’t want caching interfering with our response headers*.
-
-c. At the **HTTP Compression** drop down menu select the HTTP compression profile you just created
-
-2. Now hit the F5 vLab web page and perform several <CTRL+F5> commands to refresh the content.
-
-   a. Now off to the statistics on the sidebar, under the **Local Traffic** drop down menu select **Profiles Summary**
-
-   b. Select the **View** link next to the **HTTP Compression** profile
-      type.  Here you will see F5 compressing appropriate content prior to return the request.
-
-.. image:: /_static/101/image50.png
-   :width: 2.71523in
-   :height: 1.8in
-
-c. Go to the main page for the **F5 vLab** demo application and select the **Demos** drop down menu from the top and then **Request and Response Headers**. Notice you no longer see the **Accept-Encoding** header in the **Request Headers Received at the Server** section.  The BIG-IP essentially turned off server compression without any changes to the server by stripping out the **accept-encoding** header as the BIG-IP sent the request to server.
-
-Archive your work in a file called: **lb4_acceleration**
+.. image:: /_static/101/image57.png
+   :align: center
+   :width: 500
