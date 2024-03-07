@@ -6,70 +6,9 @@ basic troubleshooting commands
 
 Objective:
 
--  Get a QKView and upload it to http://ihealth.f5.com and review the
-   results.
-
 -  Perform a TCPDump to watch traffic flow.
 
 -  Obtain web page information via Curl.
-
-Archive the current configuration and perform a health check using a QKview
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-1. Obtain a **QKView**. Go to **System > Support**
-
-   a. Here under **System>Support>Manage iHealth Credentials** you can
-      enter you iHealth (F5) credentials
-
-c. From **System>Support** select the **New Support Snapshot** button to
-   create a QKView
-
-   a. From here you can create and upload a qkview, just create a qkview
-      or create a TCPDump
-
-   .. image:: /_static/101/image64.png
-      :width: 4.13816in
-      :height: 4.01299in
-
-1. Import the QKView into iHealth if you did not automatically upload
-   the QKview to iHealth.
-
-d. Go to http://ihealth.f5.com. If you don’t have an account, now is the time to create one and then skip to the next section **Troubleshoot using TCPDump or Curl** because it will take time for your account set up.**
-
-e. Select **Upload to iHealth** button and upload the QKView file you
-   download from your BIG-IP
-
-f. Once the file is uploaded you can click on the hostname to view you
-   the heuristics.
-
-   i.  Note the Diagnostics. Go to **Diagnostics > Critical** on the
-       side-bar.
-
-       1. Example: **The configuration contains user accounts with
-          insecure passwords** is because we are using default
-          passwords.
-
-   ii. Select **Network > Virtual Servers**, then click on the small
-       white triangles to expand the view or go to **Pools**, then
-       **Pool Members** to continue to expand the view.
-
-       1. This is a little more detailed than **Local Traffic > Network
-          Map**
-
-   .. image:: /_static/101/image65.png
-      :width: 3.03774in
-      :height: 2.13701in
-
-g. Want to know interesting CLI commands, go to **Commands > Standard**
-   and expand **tmsh** then **LTM** and click on **show /ltm virtual**
-   toward the bottom.
-
-h. Under **Files > config** you can view the **bigip.conf** file and see
-   the command lines you used for you build.
-
-   i. All the **log** files are here too
-
-i. Feel free to just poke around.
 
 Troubleshoot using TCPDump or Curl.
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
