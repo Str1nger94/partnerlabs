@@ -21,7 +21,7 @@ Ratio Load Balancing
    **Members** from the top bar or you could click on the **Members**
    link in the Pool List screen.
 
-.. image:: /_static/101/image24.png
+.. image:: /_static/101/image69.png
    :width: 5.35046in
    :height: 1.60014in
 
