@@ -8,7 +8,6 @@ on your customer’s requirements and topology.
 
 Log on to the BIG-IP TMUI (GUI) Interface:
   - **UDF** - Under Components, select the **Access** drop-down and then **TMUI**
-  - **AWS** - Go to https://<Bigip1ManagementEipAddress>
 
 Creating VLANs
 --------------
