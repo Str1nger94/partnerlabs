@@ -189,7 +189,7 @@ Default Monitors
 c. Notice we have several options, for nodes you want a generic monitor,
    so we will choose **icmp**.
 
-d. Select **icmp** from the **Available** box and hit the arrows pointing to the left to place
+d. Select **icmp** from the **Available** box and hit the arrows button pointing to the left to place
    it in the **Active** box.
 
 e. Click on the **Update** button to finalize your changes.
